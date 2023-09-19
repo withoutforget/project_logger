@@ -2,13 +2,6 @@
 
 #include "logger.hpp"
 
-
-
-
-
-
-
-
 int main() {
 	try {
 		auto p = make_handler<console_handler_basic<char>>();
