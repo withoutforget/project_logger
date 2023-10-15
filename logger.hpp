@@ -4,39 +4,46 @@
 #include <utility>
 #include <memory>
 #include <stdexcept>
-#include <format>
+#include <sstream>
 
 #include "handlers.hpp"
 #include "utils.hpp"
 #include "levels.hpp"
 
-template<typename CharT,
-	typename Traits = std::char_traits<CharT>,
-	typename Allocator = std::allocator<CharT>>
-	class logger_basic {
+template<class String>
+	class basic_logger {
 	public:
-		using string_type = std::basic_string<CharT, Traits, Allocator>;
+		using string_type = String;
+		using value_type = String::value_type;
+		using traits_type = String::traits_type;
+		using allocator_type = String::allocator_type;
 	private:
-		handler_ptr<CharT, Traits, Allocator> m_handler;
+		handler_ptr<String> m_handler;
 		std::shared_ptr<Ilevel> m_level = std::make_shared<Ilevel>();
 	public:
-		logger_basic() = default;
-		logger_basic(const handler_ptr<CharT, Traits, Allocator>& handler) : m_handler(handler) {}
-		logger_basic(handler_ptr<CharT, Traits, Allocator>&& handler) : m_handler(std::move(handler)) {}
-		logger_basic(const logger_basic& rhs) : m_handler(rhs.m_handler) {}
-		logger_basic(logger_basic&& rhs) noexcept { std::swap(m_handler, rhs.m_handler); }
-		~logger_basic() = default;
+		basic_logger() = default;
+		basic_logger(const handler_ptr<String>& handler) : m_handler(handler) {}
+		basic_logger(handler_ptr<String>&& handler) : m_handler(std::move(handler)) {}
+		basic_logger(const basic_logger& rhs) : m_handler(rhs.m_handler) {}
+		basic_logger(basic_logger&& rhs) noexcept { std::swap(m_handler, rhs.m_handler); }
+		~basic_logger() = default;
 	public:
 		void set_level(std::shared_ptr<Ilevel> level) { m_level = level; }
 		std::shared_ptr<Ilevel>& get_level() { return m_level; }
 		auto& operator<<(std::shared_ptr<Ilevel> level) { return (set_level(level), *this); }
+		auto& operator<<(const string_type& text) { return (log(text), *this); }
 	public:
 		void log(const string_type& text) {
 			if (m_handler == nullptr)
 				throw std::runtime_error{ "nullptr handler" };
-			auto s = string_cast<string_type>("[{}] {}"s);
-			auto formatted_string = std::vformat(s, std::make_format_args(string_cast<string_type>(m_level->name()), text));
-			auto status = m_handler->log(formatted_string);
-
+			std::basic_stringstream<value_type, traits_type, allocator_type> ss;
+			static auto left_brace = string_cast<string_type>("["s);
+			static auto right_brace = string_cast<string_type>("] "s);
+			ss << left_brace << get_current_time<string_type>()	<< right_brace;
+			ss << left_brace << string_cast<string_type>(m_level->name()) << right_brace;
+			ss << left_brace << text << right_brace;
+			auto status = m_handler->log(ss.str());
+			if (!status)
+				throw std::runtime_error{ "Log failed with error "s + std::to_string(status)};
 		}
 };
