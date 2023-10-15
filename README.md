@@ -4,10 +4,10 @@ That is a preview version. I just have started and I am going to improve this lo
 
 ```cpp
 int main() {
-	try { // tbh i almost haven't used exceptions but i guess i will
-		auto p = make_handler<console_handler_basic<char>>();
-		logger_basic<char> logger(p);
-		logger.log("hello world");
+	try {
+		auto p = make_handler<basic_console_handler<std::u16string>>();
+		basic_logger<std::u16string> logger(p);
+		logger.log(u"Привет мир");
 	}
 	catch (std::exception& e) {
 		std::cout << "exception:" << e.what() << std::endl;
